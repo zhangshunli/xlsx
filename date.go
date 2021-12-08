@@ -11,6 +11,7 @@ const (
 
 	secondsInADay = float64((24 * time.Hour) / time.Second)
 	nanosInADay   = float64((24 * time.Hour) / time.Nanosecond)
+	roundEpsilon   = 1e-9
 )
 
 var (
@@ -117,7 +118,7 @@ func TimeFromExcelTime(excelTime float64, date1904 bool) time.Time {
 		}
 		return date
 	}
-	var floatPart = excelTime - float64(wholeDaysPart)
+	var floatPart = excelTime - float64(wholeDaysPart) + roundEpsilon
 	if date1904 {
 		date = excel1904Epoc
 	} else {
