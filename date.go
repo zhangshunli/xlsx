@@ -6,11 +6,12 @@ import (
 )
 
 const (
-	MJD_0 float64 = 2400000.5
+	MJD_0      float64 = 2400000.5
 	MJD_JD2000 float64 = 51544.5
 
-	secondsInADay = float64((24*time.Hour)/time.Second)
-	nanosInADay = float64((24*time.Hour)/time.Nanosecond)
+	secondsInADay = float64((24 * time.Hour) / time.Second)
+	nanosInADay   = float64((24 * time.Hour) / time.Nanosecond)
+	roundEpsilon  = 1e-9
 )
 
 var (
@@ -25,8 +26,8 @@ var (
 	excel1900Epoc = time.Date(1899, time.December, 30, 0, 0, 0, 0, time.UTC)
 	excel1904Epoc = time.Date(1904, time.January, 1, 0, 0, 0, 0, time.UTC)
 	// Days between epocs, including both off by one errors for 1900.
-	daysBetween1970And1900 = float64(unixEpoc.Sub(excel1900Epoc)/(24 * time.Hour))
-	daysBetween1970And1904 = float64(unixEpoc.Sub(excel1904Epoc)/(24 * time.Hour))
+	daysBetween1970And1900 = float64(unixEpoc.Sub(excel1900Epoc) / (24 * time.Hour))
+	daysBetween1970And1904 = float64(unixEpoc.Sub(excel1904Epoc) / (24 * time.Hour))
 )
 
 func TimeToUTCTime(t time.Time) time.Time {
@@ -117,14 +118,14 @@ func TimeFromExcelTime(excelTime float64, date1904 bool) time.Time {
 		}
 		return date
 	}
-	var floatPart = excelTime - float64(wholeDaysPart)
+	var floatPart = excelTime - float64(wholeDaysPart) + roundEpsilon
 	if date1904 {
 		date = excel1904Epoc
 	} else {
 		date = excel1900Epoc
 	}
 	durationPart := time.Duration(nanosInADay * floatPart)
-	return date.AddDate(0,0, wholeDaysPart).Add(durationPart)
+	return date.AddDate(0, 0, wholeDaysPart).Add(durationPart)
 }
 
 // TimeToExcelTime will convert a time.Time into Excel's float representation, in either 1900 or 1904
@@ -132,9 +133,9 @@ func TimeFromExcelTime(excelTime float64, date1904 bool) time.Time {
 // TODO should this should handle Julian dates?
 func TimeToExcelTime(t time.Time, date1904 bool) float64 {
 	// Get the number of days since the unix epoc
-	daysSinceUnixEpoc := float64(t.Unix())/secondsInADay
+	daysSinceUnixEpoc := float64(t.Unix()) / secondsInADay
 	// Get the number of nanoseconds in days since Unix() is in seconds.
-	nanosPart := float64(t.Nanosecond())/nanosInADay
+	nanosPart := float64(t.Nanosecond()) / nanosInADay
 	// Add both together plus the number of days difference between unix and Excel epocs.
 	var offsetDays float64
 	if date1904 {
