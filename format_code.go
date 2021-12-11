@@ -166,7 +166,7 @@ func (fullFormat *parsedNumberFormat) formatNumericCell(cell *Cell) (string, err
 	case builtInNumFmt[builtInNumFmtIndex_GENERAL]: // General is literally "general"
 		// prefix, showPercent, and suffix cannot apply to the general format
 		// The logic for showing numbers when the format is "general" is much more complicated than the rest of these.
-		generalFormatted, err := generalNumericScientific(cell.Value, true)
+		generalFormatted, err := generalNumericScientific(cell.Value, false)
 		if err != nil {
 			return rawValue, nil
 		}
