@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+    "regexp"
 )
 
 // Do not edit these attributes once this struct is created. This struct should only be created by
@@ -513,6 +514,17 @@ func (fullFormat *parsedNumberFormat) parseTime(value string, date1904 bool) (st
 	}
 	val := TimeFromExcelTime(f, date1904)
 	format := fullFormat.numFmt
+    
+    if strings.Contains(format, "[") {
+		var re = regexp.MustCompile(`\[.+\]`)
+		format = re.ReplaceAllLiteralString(format, "")
+	}
+    
+    // use only first variant
+	if strings.Contains(format, ";") {
+		format = format[:strings.IndexByte(format, ';')]
+	}
+    
 	// Replace Excel placeholders with Go time placeholders.
 	// For example, replace yyyy with 2006. These are in a specific order,
 	// due to the fact that m is used in month, minute, and am/pm. It would
@@ -556,19 +568,49 @@ func (fullFormat *parsedNumberFormat) parseTime(value string, date1904 bool) (st
 		{"%%%%", "January"},
 		{"&&&&", "Monday"},
 	}
+    
+    
+    replacementsGlobal := []struct{ xltime, gotime string }{
+		{"\\-", "-"},
+		{"\\ ", " "},
+		{"\\.", "."},
+		{"\\", ""},
+		{"\"", ""},
+	}
 	// It is the presence of the "am/pm" indicator that determins
 	// if this is a 12 hour or 24 hours time format, not the
 	// number of 'h' characters.
+    
+    var padding bool
+	if val.Hour() == 0 && !strings.Contains(format, "hh") && !strings.Contains(format, "HH") {
+		padding = true
+	}
+    
 	if is12HourTime(format) {
 		format = strings.Replace(format, "hh", "03", 1)
 		format = strings.Replace(format, "h", "3", 1)
+        format = strings.Replace(format, "HH", "3", 1)
+		format = strings.Replace(format, "H", "3", 1)
 	} else {
 		format = strings.Replace(format, "hh", "15", 1)
 		format = strings.Replace(format, "h", "15", 1)
+        
+        if 0 < val.Hour() && val.Hour() < 12 {
+			format = strings.Replace(format, "h", "3", 1)
+			format = strings.Replace(format, "H", "3", 1)
+		} else {
+			format = strings.Replace(format, "h", "15", 1)
+			format = strings.Replace(format, "H", "15", 1)
+		}
 	}
 	for _, repl := range replacements {
 		format = strings.Replace(format, repl.xltime, repl.gotime, 1)
 	}
+    
+    for _, repl := range replacementsGlobal {
+		format = strings.Replace(format, repl.xltime, repl.gotime, -1)
+	}
+    
 	// If the hour is optional, strip it out, along with the
 	// possible dangling colon that would remain.
 	if val.Hour() < 1 {
@@ -580,7 +622,12 @@ func (fullFormat *parsedNumberFormat) parseTime(value string, date1904 bool) (st
 		format = strings.Replace(format, "[3]", "3", 1)
 		format = strings.Replace(format, "[15]", "15", 1)
 	}
-	return val.Format(format), nil
+    s := val.Format(format)
+    if padding {
+		s = strings.Replace(s, "00:", "0:", 1)
+	}
+    
+	return s, nil
 }
 
 func skipToRune(runes []rune, r rune) (int, error) {
